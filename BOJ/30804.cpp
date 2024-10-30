@@ -11,7 +11,7 @@ int main()
     std::cin >> n;
     if (n <= 2)
     {
-        std::cout << 2 << '\n';
+        std::cout << n << '\n';
         return 0;
     }
     std::vector<int> v(n);
