@@ -2,6 +2,15 @@
 #include <list>
 #include <algorithm>
 
+bool compare(const std::pair<int, int> &a, const std::pair<int, int> &b)
+{
+    if (a.first == b.first)
+    {
+        return a.second < b.second;
+    }
+    return a.first < b.first;
+}
+
 int main()
 {
     std::ios::sync_with_stdio(false);
@@ -24,35 +33,39 @@ int main()
         cow.push_back({a, b});
     }
     chicken.sort();
+    cow.sort(compare);
     int cnt = 0;
-    int min = 2147483647;
-    for (auto it = chicken.begin(); it != chicken.end(); ++it)
+    auto chit = chicken.begin();
+    auto coit = cow.begin();
+    while (chit != chicken.end())
     {
-        min = 2147483647;
-        auto idx = cow.begin();
-        for (auto it2 = cow.begin(); it2 != cow.end(); ++it2)
+        coit = cow.begin();
+        while (coit != cow.end() && coit->second < *chit)
         {
-            if (it2->first <= *it && *it <= it2->second && min >= (it2->second - it2->first))
+            ++coit;
+        }
+        cow.erase(cow.begin(), coit);
+        if (cow.empty())
+        {
+            break;
+        }
+        int min = 2147483647;
+        auto target = cow.end();
+        while (coit != cow.end() && coit->first <= *chit && coit->second >= *chit)
+        {
+            if (coit->second < min)
             {
-                if (min == (it2->second - it2->first))
-                {
-                    if (idx->first > it2->first)
-                    {
-                        idx = it2;
-                    }
-                }
-                else
-                {
-                    min = (it2->second - it2->first);
-                    idx = it2;
-                }
+                min = coit->second;
+                target = coit;
             }
+            ++coit;
         }
-        if (min != 2147483647)
+        if (target != cow.end())
         {
+            cow.erase(target);
             ++cnt;
-            cow.erase(idx);
         }
+        ++chit;
     }
     std::cout << cnt << '\n';
 }
