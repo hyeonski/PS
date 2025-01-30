@@ -1,14 +1,14 @@
 #include <iostream>
-#include <list>
+#include <vector>
 #include <algorithm>
 
 bool compare(const std::pair<int, int> &a, const std::pair<int, int> &b)
 {
-    if (a.first == b.first)
+    if (a.second == b.second)
     {
-        return a.second < b.second;
+        return a.first < b.first;
     }
-    return a.first < b.first;
+    return a.second < b.second;
 }
 
 int main()
@@ -17,55 +17,37 @@ int main()
     std::cin.tie(nullptr);
     std::cout.tie(nullptr);
 
-    std::list<int> chicken;
-    std::list<std::pair<int, int>> cow;
     int c, n;
     std::cin >> c >> n;
+    std::vector<int> chicken(c);
+    std::vector<std::pair<int, int>> cow(n);
+    std::vector<bool> check(n, false);
     int a, b;
     for (int i = 0; i < c; ++i)
     {
         std::cin >> a;
-        chicken.push_back(a);
+        chicken[i] = a;
     }
     for (int i = 0; i < n; ++i)
     {
         std::cin >> a >> b;
-        cow.push_back({a, b});
+        cow[i] = {a, b};
     }
-    chicken.sort();
-    cow.sort(compare);
-    int cnt = 0;
-    auto chit = chicken.begin();
-    auto coit = cow.begin();
-    while (chit != chicken.end())
+    std::sort(chicken.begin(), chicken.end());
+    std::sort(cow.begin(), cow.end(), compare);
+    int cnt = 0, now;
+    for (int i = 0; i < c; ++i)
     {
-        coit = cow.begin();
-        while (coit != cow.end() && coit->second < *chit)
+        now = chicken[i];
+        for (int j = 0; j < n; ++j)
         {
-            ++coit;
-        }
-        cow.erase(cow.begin(), coit);
-        if (cow.empty())
-        {
-            break;
-        }
-        int min = 2147483647;
-        auto target = cow.end();
-        while (coit != cow.end() && coit->first <= *chit && coit->second >= *chit)
-        {
-            if (coit->second < min)
+            if (cow[j].first <= now && now <= cow[j].second && check[j] == false)
             {
-                min = coit->second;
-                target = coit;
+                ++cnt;
+                check[j] = true;
+                break;
             }
-            ++coit;
         }
-        if (target != cow.end())
-        {
-            cow.erase(target);
-            ++cnt;
-        }
-        ++chit;
     }
     std::cout << cnt << '\n';
 }
