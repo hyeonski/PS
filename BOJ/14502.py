@@ -1,5 +1,8 @@
 from collections import deque
 
+DX = [0, 0, -1, 1]
+DY = [-1, 1, 0, 0]
+
 n, m = map(int, input().split())
 virus = []
 lab = []
@@ -11,29 +14,29 @@ for i in range(n):
     lab.append(row)
 
 
-def bfs(a, b, visited):
-    q = deque()
-    q.append([a, b])
-    visited[a][b] = True
-    dx = [0, 0, -1, 1]
-    dy = [-1, 1, 0, 0]
-    while len(q) != 0:
+def spread_virus(visited):
+    q = deque(virus)
+
+    for x, y in virus:
+        visited[x][y] = True
+
+    while q:
         x, y = q.popleft()
-        for i in range(4):
-            nx, ny = x + dx[i], y + dy[i]
-            if 0 <= nx < n and 0 <= ny < m and lab[nx][ny] == 0 and visited[nx][ny] == False:
+        for direction in range(4):
+            nx = x + DX[direction]
+            ny = y + DY[direction]
+            if 0 <= nx < n and 0 <= ny < m and lab[nx][ny] == 0 and not visited[nx][ny]:
                 visited[nx][ny] = True
-                q.append([nx, ny])
+                q.append((nx, ny))
 
 
 def get_area_size():
     visited = [[False for _ in range(m)] for _ in range(n)]
-    for vi in virus:
-        bfs(vi[0], vi[1], visited)
+    spread_virus(visited)
     count = 0
     for i in range(n):
         for j in range(m):
-            if lab[i][j] == 0 and visited[i][j] == False:
+            if lab[i][j] == 0 and not visited[i][j]:
                 count += 1
     return count
 
@@ -45,8 +48,7 @@ def backtrack(last_x, last_y, depth):
     global max_size
     if depth == 3:
         area = get_area_size()
-        if max_size < area:
-            max_size = area
+        max_size = max(max_size, area)
         return
     for i in range(last_x, n):
         start_y = last_y + 1 if i == last_x else 0
