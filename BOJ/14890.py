@@ -1,54 +1,70 @@
+import sys
+
+input = sys.stdin.readline
+
 n, l = map(int, input().split())
-map2d = [list(map(int, input().split())) for _ in range(n)]
+grid = [list(map(int, input().split())) for _ in range(n)]
+
+
+def can_place_slope(road, used, start):
+    if start < 0 or start + l > n:
+        return False
+
+    height = road[start]
+    for idx in range(start, start + l):
+        if road[idx] != height or used[idx]:
+            return False
+
+    return True
+
+
+def mark_slope(used, start):
+    for idx in range(start, start + l):
+        used[idx] = True
+
+
+def is_passable(road):
+    used = [False] * n
+    idx = 0
+
+    while idx < n - 1:
+        current = road[idx]
+        next_height = road[idx + 1]
+
+        if current == next_height:
+            idx += 1
+            continue
+
+        if abs(current - next_height) > 1:
+            return False
+
+        # 오르막: 현재 칸을 기준으로 왼쪽에 길이 l의 평지가 필요하다.
+        if current + 1 == next_height:
+            start = idx - l + 1
+            if not can_place_slope(road, used, start):
+                return False
+            mark_slope(used, start)
+            idx += 1
+            continue
+
+        # 내리막: 다음 칸을 기준으로 오른쪽에 길이 l의 평지가 필요하다.
+        start = idx + 1
+        if not can_place_slope(road, used, start):
+            return False
+        mark_slope(used, start)
+        idx += l
+
+    return True
+
+
 count = 0
 
-
-def is_even(road, start):
-    for i in range(start + 1, start+l):
-        if road[i] != road[start]:
-            return False
-    return True
-
-
-def is_marked(mark, start):
-    return any(mark[start:start+l])
-
-
-def can_mark(road, mark, start):
-    return is_even(road, start) and (not is_marked(mark, start))
-
-
-def do_mark(mark, start):
-    for i in range(l):
-        mark[start + i] = True
-
-
-def check(num, rowwise):
-    road = map2d[num] if rowwise else [map2d[i][num] for i in range(n)]
-    mark = [False for _ in range(n)]
-    i = 0
-    while i < n:
-        if i == n - 1:
-            break
-        if road[i] == road[i + 1]:
-            i += 1
-        elif road[i] + 1 == road[i + 1] and i + 1 >= l and can_mark(road, mark, i - l + 1):
-            do_mark(mark, i - l + 1)
-            i += 1
-        elif road[i] - 1 == road[i + 1] and i + 1 + l <= n and can_mark(road, mark, i + 1):
-            do_mark(mark, i + 1)
-            i += l
-        else:
-            return False
-    return True
-
-
-for i in range(n):
-    if check(i, True):
+for row in grid:
+    if is_passable(row):
         count += 1
 
-for i in range(n):
-    if check(i, False):
+for col in zip(*grid):
+    if is_passable(list(col)):
         count += 1
 
 print(count)
