@@ -3,69 +3,78 @@
 #include <map>
 using namespace std;
 
+struct Interval {
+    int left;
+    int right;
+};
+
+struct IntervalCmp {
+    bool operator()(const Interval& a, const Interval& b) const {
+        int lenA = a.right - a.left;
+        int lenB = b.right - b.left;
+
+        if (lenA != lenB) return lenA > lenB;
+        if (a.left != b.left) return a.left < b.left;
+        return a.right < b.right;
+    }
+};
+
 set<int> lamps;
-multiset<int> gaps;
 map<int, int> lamp_num_to_pos;
+set<Interval, IntervalCmp> intervals;
 
 int last_m = 0;
 int n = 0, m = 0;
 
-void add_gap(int a, int b) {
-    gaps.insert(b - a);
+void add_interval(int left, int right) {
+    if (left >= right) return;
+
+    Interval interval;
+    interval.left = left;
+    interval.right = right;
+    intervals.insert(interval);
 }
 
-void erase_gap(int a, int b) {
-    multiset<int>::iterator it = gaps.find(b - a);
-    if (it != gaps.end()) {
-        gaps.erase(it);
+void erase_interval(int left, int right) {
+    if (left >= right) return;
+
+    Interval interval;
+    interval.left = left;
+    interval.right = right;
+
+    set<Interval, IntervalCmp>::iterator it = intervals.find(interval);
+    if (it != intervals.end()) {
+        intervals.erase(it);
     }
 }
 
 void add_lamp() {
-    if (lamps.size() < 2) return;
+    if (intervals.empty()) return;
 
-    int max_len = -1;
-    set<int>::iterator max_left = lamps.begin();
+    Interval best = *intervals.begin();
+    int left = best.left;
+    int right = best.right;
 
-    set<int>::iterator it = lamps.begin();
-    set<int>::iterator next_it = it;
-    ++next_it;
+    erase_interval(left, right);
 
-    while (next_it != lamps.end()) {
-        int len = *next_it - *it;
-        if (len > max_len) {
-            max_len = len;
-            max_left = it;
-        }
-        ++it;
-        ++next_it;
-    }
-
-    int left = *max_left;
-    set<int>::iterator right_it = max_left;
-    ++right_it;
-    int right = *right_it;
-
-    int new_pos = (left + right + 1) / 2; // ceil((left + right) / 2.0)
-
-    erase_gap(left, right);
+    int new_pos = (left + right + 1) / 2;
 
     lamps.insert(new_pos);
     ++last_m;
     lamp_num_to_pos[last_m] = new_pos;
 
-    add_gap(left, new_pos);
-    add_gap(new_pos, right);
+    add_interval(left, new_pos);
+    add_interval(new_pos, right);
 
     ++m;
 }
 
 void delete_lamp(int target) {
-    if (lamp_num_to_pos.find(target) == lamp_num_to_pos.end()) return;
+    map<int, int>::iterator map_it = lamp_num_to_pos.find(target);
+    if (map_it == lamp_num_to_pos.end()) return;
 
-    int target_pos = lamp_num_to_pos[target];
+    int target_pos = map_it->second;
     set<int>::iterator it = lamps.find(target_pos);
-
     if (it == lamps.end()) return;
 
     set<int>::iterator prev_it = it;
@@ -84,42 +93,43 @@ void delete_lamp(int target) {
     }
 
     if (has_prev) {
-        erase_gap(*prev_it, target_pos);
+        erase_interval(*prev_it, target_pos);
     }
     if (has_next) {
-        erase_gap(target_pos, *next_it);
+        erase_interval(target_pos, *next_it);
     }
     if (has_prev && has_next) {
-        add_gap(*prev_it, *next_it);
+        add_interval(*prev_it, *next_it);
     }
 
     lamps.erase(it);
-    lamp_num_to_pos.erase(target);
-
+    lamp_num_to_pos.erase(map_it);
     --m;
 }
 
 int get_r() {
     if (m == 0) return 0;
 
+    int answer = 0;
+
     int left_edge = (*lamps.begin() - 1) * 2;
     int right_edge = (n - *lamps.rbegin()) * 2;
 
-    int max_len = 0;
-    if (!gaps.empty()) {
-        max_len = *gaps.rbegin();
-    }
-
-    int answer = left_edge;
+    if (answer < left_edge) answer = left_edge;
     if (answer < right_edge) answer = right_edge;
-    if (answer < max_len) answer = max_len;
+
+    if (!intervals.empty()) {
+        Interval best = *intervals.begin();
+        int max_len = best.right - best.left;
+        if (answer < max_len) answer = max_len;
+    }
 
     return answer;
 }
 
 int main() {
     ios::sync_with_stdio(false);
-    cin.tie(nullptr);
+    cin.tie(NULL);
 
     int q;
     cin >> q;
@@ -132,8 +142,8 @@ int main() {
             cin >> n >> m;
 
             lamps.clear();
-            gaps.clear();
             lamp_num_to_pos.clear();
+            intervals.clear();
 
             for (int i = 1; i <= m; i++) {
                 int x;
@@ -144,13 +154,13 @@ int main() {
 
             last_m = m;
 
-            if (lamps.size() >= 2) {
+            if (m >= 2) {
                 set<int>::iterator it = lamps.begin();
                 set<int>::iterator next_it = it;
                 ++next_it;
 
                 while (next_it != lamps.end()) {
-                    add_gap(*it, *next_it);
+                    add_interval(*it, *next_it);
                     ++it;
                     ++next_it;
                 }
