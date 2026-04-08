@@ -1,6 +1,8 @@
 .idea
-**/a.out
-**/.vscode/**
-**/.DS_Store
+a.out
+.vscode
+.DS_Store
+a.out.dSYM
+
 
 .venv
