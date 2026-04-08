@@ -29,7 +29,7 @@ struct Ship
 	}
 };
 
-bool compare_p(Ship *a, Ship *b)
+bool compare_ready(Ship *a, Ship *b)
 {
 	if (a->p == b->p)
 	{
@@ -38,7 +38,7 @@ bool compare_p(Ship *a, Ship *b)
 	return a->p < b->p;
 }
 
-bool compare_t(Ship *a, Ship *b)
+bool compare_wait(Ship *a, Ship *b)
 {
 	int atime = a->last_shot + a->r, btime = b->last_shot + b->r;
 	if (atime == btime)
@@ -51,6 +51,57 @@ bool compare_t(Ship *a, Ship *b)
 unordered_map<int, Ship *> ships;
 vector<Ship *> waitq;
 vector<Ship *> readyq;
+
+void move_available_ships_to_ready()
+{
+	while (!waitq.empty() && waitq.front()->last_shot + waitq.front()->r <= timestamp)
+	{
+		Ship *temp = waitq.front();
+		pop_heap(waitq.begin(), waitq.end(), compare_wait);
+		waitq.pop_back();
+		if (temp == ships[temp->id])
+		{
+			readyq.push_back(temp);
+			push_heap(readyq.begin(), readyq.end(), compare_ready);
+		}
+		else
+		{
+			delete temp;
+		}
+	}
+}
+
+void collect_ready_candidates(vector<Ship *> &candid, int limit)
+{
+	int count = 0;
+	while (!readyq.empty() && count < limit)
+	{
+		Ship *temp = readyq.front();
+		pop_heap(readyq.begin(), readyq.end(), compare_ready);
+		readyq.pop_back();
+		if (temp == ships[temp->id])
+		{
+			candid.push_back(temp);
+			++count;
+		}
+		else
+		{
+			delete temp;
+		}
+	}
+}
+
+void push_back_to_waitq(Ship *ship)
+{
+	waitq.push_back(ship);
+	push_heap(waitq.begin(), waitq.end(), compare_wait);
+}
+
+void push_back_to_readyq(Ship *ship)
+{
+	readyq.push_back(ship);
+	push_heap(readyq.begin(), readyq.end(), compare_ready);
+}
 
 int main()
 {
@@ -75,14 +126,13 @@ int main()
 				ships[id] = temp;
 				readyq.push_back(temp);
 			}
-			make_heap(readyq.begin(), readyq.end(), compare_p);
+			make_heap(readyq.begin(), readyq.end(), compare_ready);
 			break;
 		case 200:
 			cin >> id >> p >> r;
 			temp = new Ship(id, p, r);
 			ships[id] = temp;
-			readyq.push_back(temp);
-			push_heap(readyq.begin(), readyq.end(), compare_p);
+			push_back_to_readyq(temp);
 			break;
 		case 300:
 			cin >> id >> pw;
@@ -90,74 +140,46 @@ int main()
 			ships[id] = new Ship(id, pw, temp->r, temp->last_shot);
 			if (temp->last_shot + temp->r <= timestamp)
 			{
-				readyq.push_back(ships[id]);
-				push_heap(readyq.begin(), readyq.end(), compare_p);
+				push_back_to_readyq(ships[id]);
 			}
 			else
 			{
-				waitq.push_back(ships[id]);
-				push_heap(waitq.begin(), waitq.end(), compare_t);
+				push_back_to_waitq(ships[id]);
 			}
 			break;
 		case 400:
-			vector<Ship *> candid;
-			while (waitq.size() > 0 && waitq[0]->last_shot + waitq[0]->r <= timestamp)
 			{
-				temp = waitq[0];
-				pop_heap(waitq.begin(), waitq.end(), compare_t);
-				waitq.pop_back();
-				if (temp == ships[temp->id])
+				vector<Ship *> candid;
+				vector<Ship *> selected;
+				int sum = 0;
+
+				move_available_ships_to_ready();
+				collect_ready_candidates(candid, 5);
+
+				sort(candid.begin(), candid.end(), compare_ready);
+
+				int size = min(5, static_cast<int>(candid.size()));
+				for (int i = (int)candid.size() - 1; i >= (int)candid.size() - size; --i)
 				{
-					candid.push_back(temp);
+					selected.push_back(candid[i]);
+					sum += candid[i]->p;
 				}
-				else
+
+				cout << sum << ' ' << size;
+				for (int i = 0; i < size; ++i)
 				{
-					delete temp;
+					cout << ' ' << selected[i]->id;
+					selected[i]->last_shot = timestamp;
+					push_back_to_waitq(selected[i]);
 				}
-			}
-			for (int count = 0; !readyq.empty() && count < 5;)
-			{
-				temp = readyq[0];
-				pop_heap(readyq.begin(), readyq.end(), compare_p);
-				readyq.pop_back();
-				if (temp == ships[temp->id])
+				cout << '\n';
+
+				for (int i = 0; i < (int)candid.size() - size; ++i)
 				{
-					candid.push_back(temp);
-					++count;
+					push_back_to_readyq(candid[i]);
 				}
-				else
-				{
-					delete temp;
-				}
+				break;
 			}
-			sort(candid.begin(), candid.end(), compare_p);
-			int sum = 0;
-			int size = min(5, static_cast<int>(candid.size()));
-			int count = 0;
-			for (auto it = candid.end() - 1; count < size && it >= candid.begin(); --it)
-			{
-				sum += (*it)->p;
-				++count;
-			}
-			cout << sum << ' ' << size;
-			count = 0;
-			for (auto it = candid.end() - 1; count < size && it >= candid.begin(); --it)
-			{
-				cout << ' ' << (*it)->id;
-				(*it)->last_shot = timestamp;
-				waitq.push_back(*it);
-				push_heap(waitq.begin(), waitq.end(), compare_t);
-				candid.pop_back();
-				++count;
-			}
-			cout << '\n';
-			for (auto ship : candid)
-			{
-				readyq.push_back(ship);
-				push_heap(readyq.begin(), readyq.end(), compare_p);
-			}
-			candid.clear();
-			break;
 		}
 		++timestamp;
 	}
